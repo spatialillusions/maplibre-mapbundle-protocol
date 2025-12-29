@@ -1,4 +1,4 @@
-import getHeaderAndFileList from "./get-header-and-filelist.js";
+import getFilelistFromPMX from "./get-filelist.js";
 
 function deserializeIndex(dataView) {
   const index = [];
@@ -83,7 +83,7 @@ export default class SharedPromiseCache {
     this.subdivided = new Map(); // key: sourceKey|z|x|y -> Uint8Array
   }
 
-  async getHeader(source) {
+  async getFilelist(source) {
     const cacheKey = source.getKey();
     const cacheValue = this.cache.get(cacheKey);
     if (cacheValue) {
@@ -93,7 +93,7 @@ export default class SharedPromiseCache {
     }
 
     const p = new Promise((resolve, reject) => {
-      getHeaderAndFileList(source)
+      getFilelistFromPMX(source)
         .then((res) => {
           /*
           if (res[1]) {
@@ -102,7 +102,7 @@ export default class SharedPromiseCache {
               data: Promise.resolve(res[1][2]),
             });
           }*/
-          resolve(res[0]);
+          resolve(res);
           this.prune();
         })
         .catch((e) => {
@@ -135,30 +135,6 @@ export default class SharedPromiseCache {
     return p;
   }
 
-  async getTileIndex(source, file, header, signal) {
-    const cacheKey = `${source.getKey()}|${
-      header.etag || ""
-    }|${file}|TileIndex`;
-    const cacheValue = this.cache.get(cacheKey);
-    if (cacheValue) {
-      cacheValue.lastUsed = this.counter++;
-      const data = await cacheValue.data;
-      return data;
-    }
-    const p = new Promise((resolve, reject) => {
-      getTileIndex(source, file, header, signal)
-        .then((directory) => {
-          resolve(directory);
-          this.prune();
-        })
-        .catch((e) => {
-          reject(e);
-        });
-    });
-    this.cache.set(cacheKey, { lastUsed: this.counter++, data: p });
-    return p;
-  }
-
   prune() {
     if (this.cache.size >= this.maxCacheEntries) {
       let minUsed = Infinity;
@@ -171,28 +147,6 @@ export default class SharedPromiseCache {
       });
       if (minKey) {
         this.cache.delete(minKey);
-      }
-    }
-  }
-
-  getSubdivided(source, z, x, y) {
-    const key = `${source.getKey()}|${z}|${x}|${y}|Subdivided`;
-    return this.subdivided.get(key);
-  }
-
-  setSubdivided(source, z, x, y, bytes) {
-    const key = `${source.getKey()}|${z}|${x}|${y}|Subdivided`;
-    if (!this.subdivided.has(key)) {
-      this.subdivided.set(key, bytes);
-      // Optional lightweight prune if huge:
-      if (this.subdivided.size > this.maxCacheEntries * 2) {
-        // Remove oldest half (no usage tracking kept; iterate arbitrary)
-        let toRemove = Math.floor(this.subdivided.size / 2);
-        for (const k of this.subdivided.keys()) {
-          this.subdivided.delete(k);
-          toRemove--;
-          if (toRemove <= 0) break;
-        }
       }
     }
   }

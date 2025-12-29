@@ -1,60 +1,58 @@
 // Plain script (no modules) for running via file:// without CORS issues.
-// Requires dist/bundle.js to have been loaded first, exposing window.TilePackageProtocol.
+// Requires dist/bundle.js to have been loaded first, exposing window.pmxProtocol.
 /* global maplibregl */
 (function () {
-  if (!window.TilePackageProtocol) {
+  if (!window.pmxProtocol) {
     console.error(
-      "TilePackageProtocol global not found. Load dist/bundle.js before example.js.",
+      "pmxProtocol global not found. Load dist/bundle.js before example.js.",
     );
     return;
   }
-  const { TilePackage, FileSource, Protocol } = window.TilePackageProtocol;
+  const { TilePackage, FileSource, Protocol } = window.pmxProtocol;
   let currentMap = null;
   let protocolInstance = null;
 
   async function initMap(pkg) {
-    const header = await pkg.getHeader();
-    console.log("TilePackage header:", header);
-    if (header.spatialReference == 3857) {
-      const style = await pkg.getStyle();
-      console.log("TilePackage style:", style);
-      if (!protocolInstance) {
-        protocolInstance = new Protocol({
-          metadata: true,
-          subdivideMissingTile: true,
-          debug: true,
-        });
-        console.debug("[example] Protocol initialized (debug:true)");
-        // Critical: register existing TilePackage instance so protocol doesn't create FetchSource (causing file:/// fetch)
-        protocolInstance.add(pkg);
-        console.debug(
-          "[example] TilePackage instance added to protocol with key",
-          pkg.source.getKey(),
-        );
-        if (window.maplibregl && maplibregl.addProtocol) {
-          maplibregl.addProtocol("tilepackage", protocolInstance.package);
-          console.debug("[example] Protocol registered with maplibregl");
-        } else {
-          console.warn("[example] maplibregl.addProtocol unavailable");
-        }
-      }
-      if (currentMap) {
-        try {
-          currentMap.remove();
-          // eslint-disable-next-line no-unused-vars
-        } catch (_) {
-          /* empty */
-        }
-        currentMap = null;
-      }
-      currentMap = new maplibregl.Map({
-        container: "map-element",
-        localIdeographFontFamily: false,
-        style: style,
+    const fileList = await pkg.getFilelist();
+    console.log("TilePackage header:", fileList);
+
+    const styles = await pkg.getStyles();
+    console.log("TilePackage styles:", styles);
+
+    if (!protocolInstance) {
+      protocolInstance = new Protocol({
+        metadata: true,
+        subdivideMissingTile: true,
+        debug: true,
       });
-    } else {
-      console.warn("Unsupported spatial reference", header.spatialReference);
+      console.debug("[example] Protocol initialized (debug:true)");
+      // Critical: register existing TilePackage instance so protocol doesn't create FetchSource (causing file:/// fetch)
+      protocolInstance.add(pkg);
+      console.debug(
+        "[example] TilePackage instance added to protocol with key",
+        pkg.source.getKey(),
+      );
+      if (window.maplibregl && maplibregl.addProtocol) {
+        maplibregl.addProtocol("tilepackage", protocolInstance.package);
+        console.debug("[example] Protocol registered with maplibregl");
+      } else {
+        console.warn("[example] maplibregl.addProtocol unavailable");
+      }
     }
+    if (currentMap) {
+      try {
+        currentMap.remove();
+        // eslint-disable-next-line no-unused-vars
+      } catch (_) {
+        /* empty */
+      }
+      currentMap = null;
+    }
+    currentMap = new maplibregl.Map({
+      container: "map-element",
+      localIdeographFontFamily: false,
+      style: style,
+    });
   }
 
   function initWithFile(file) {
@@ -142,7 +140,7 @@
     }
     // Auto-load demo vtpk when served via http/https (not file://)
     if (location.protocol !== "file:") {
-      const demoName = "natural-earth.vtpk"; // present in example folder
+      const demoName = "os-zoomstack.pmx"; // present in example folder
       // Use relative path so it works regardless of host/port
       const demoUrl = demoName; // same directory as index.html
       console.log("Attempting auto-load of demo package:", demoUrl);

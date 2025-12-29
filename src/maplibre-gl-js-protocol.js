@@ -97,7 +97,7 @@ export class Protocol {
             console.debug("[tilepackage] tilejson (metadata)", tj);
           return { data: tj };
         }
-        const h = await instance.getHeader();
+        const h = await instance.getFilelist();
         if (h.minLon >= h.maxLon || h.minLat >= h.maxLat) {
           console.error(
             `Bounds of TilePackage archive ${h.minLon},${h.minLat},${h.maxLon},${h.maxLat} are not valid.`,
@@ -198,7 +198,7 @@ export class Protocol {
       const z = result[2];
       const x = result[3];
       const y = result[4];
-      const header = await instance.getHeader();
+      const header = await instance.getFilelist();
       const resp = await instance.getZxy(+z, +x, +y, abortController.signal);
       if (this.debug)
         console.debug("[tilepackage] tile fetch", {

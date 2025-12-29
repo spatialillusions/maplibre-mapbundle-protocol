@@ -1,26 +1,9 @@
 export * from "./maplibre-gl-js-protocol.js";
 export * from "./source.js";
 import { FetchSource } from "./source.js";
-import subdivideVectorTile from "./tilecutter/subdivide.js";
 import defaultDecompress from "./default-decompress.js";
 import getJsonFromFile from "./get-json-from-file.js";
 import SharedPromiseCache from "./shared-promise-cache.js";
-
-function calculateFilename(z, x, y, header) {
-  const zoom = z.toString().padStart(2, "0");
-  const baseRow = Math.floor(y / 128) * 128;
-  const baseCol = Math.floor(x / 128) * 128;
-  const rowHex = baseRow.toString(16).padStart(4, "0");
-  const colHex = baseCol.toString(16).padStart(4, "0");
-  const basePath = header.type === "tpkx" ? "tile" : "p12/tile";
-  return `${basePath}/L${zoom}/R${rowHex}C${colHex}.bundle`;
-}
-
-function getTileInfoFromTileIndex(tileIndex, z, x, y) {
-  const row = y % 128;
-  const col = x % 128;
-  return tileIndex[row][col];
-}
 
 class EtagMismatch extends Error {
   constructor(message) {
@@ -55,120 +38,12 @@ export class TilePackage {
       options && options.cache ? options.cache : new SharedPromiseCache();
   }
 
-  async getHeader() {
-    return await this.cache.getHeader(this.source);
-  }
-
-  async getZxyAttempt(z, x, y, signal) {
-    const header = await this.cache.getHeader(this.source);
-    if (z < header.minZoom || z > header.maxZoom) return undefined;
-    const file = calculateFilename(z, x, y, header);
-    let tileInfo = null;
-    if (header.files[file]) {
-      const tileIndex = await this.cache.getTileIndex(
-        this.source,
-        file,
-        header,
-        signal,
-      );
-      tileInfo = getTileInfoFromTileIndex(tileIndex, z, x, y);
-      if (tileInfo && tileInfo.tileSize > 0) {
-        const tileOffset =
-          header.files[file].absoluteOffset + tileInfo.tileOffset;
-        const resp = await this.source.getBytes(
-          tileOffset,
-          tileInfo.tileSize,
-          signal,
-          header.etag,
-        );
-        const data = await this.decompress(resp.data, header.tileCompression);
-        return { data, cacheControl: resp.cacheControl, expires: resp.expires };
-      }
-    }
-    if (header.packageType === "vtpk" && header.coverageMap) {
-      // Ascend to find parent with value 1
-      let pz = z,
-        px = x,
-        py = y,
-        foundParent = null;
-      while (pz > header.minZoom) {
-        pz -= 1;
-        px = Math.floor(px / 2);
-        py = Math.floor(py / 2);
-        const level = header.coverageMap[pz];
-        const val = level && level[px] ? level[px][py] : undefined;
-        if (val === 1) {
-          foundParent = { pz, px, py };
-          break;
-        }
-      }
-      if (foundParent) {
-        const parent = await this.getZxyAttempt(
-          foundParent.pz,
-          foundParent.px,
-          foundParent.py,
-          signal,
-        );
-        if (parent && parent.data) {
-          const cached = this.cache.getSubdivided(this.source, z, x, y);
-          if (cached) {
-            return {
-              data: cached,
-              cacheControl: parent.cacheControl,
-              expires: parent.expires,
-            };
-          }
-          const dz = z - foundParent.pz;
-          if (dz > this.maxDz) {
-            return undefined; // exceed hard cap
-          }
-          try {
-            const { data: overzoomed } = subdivideVectorTile(
-              parent.data,
-              foundParent.pz,
-              foundParent.px,
-              foundParent.py,
-              z,
-              x,
-              y,
-              { buffer: 128, maxDzWarn: this.maxDz - 1 },
-            );
-            this.cache.setSubdivided(this.source, z, x, y, overzoomed);
-            return {
-              data: overzoomed,
-              cacheControl: parent.cacheControl,
-              expires: parent.expires,
-            };
-          } catch (e) {
-            console.warn(
-              `[tilepackage subdivide] failed for z=${z} x=${x} y=${y}:`,
-              e,
-            );
-          }
-        } else {
-          console.warn(
-            `[tilepackage subdivide] parent tile missing at z=${foundParent.pz} x=${foundParent.px} y=${foundParent.py}`,
-          );
-        }
-      }
-    }
-    return undefined;
-  }
-
-  async getZxy(z, x, y, signal) {
-    try {
-      return await this.getZxyAttempt(z, x, y, signal);
-    } catch (e) {
-      if (e instanceof EtagMismatch) {
-        this.cache.invalidate(this.source);
-        return await this.getZxyAttempt(z, x, y, signal);
-      }
-      throw e;
-    }
+  async getFilelist() {
+    return await this.cache.getFilelist(this.source);
   }
 
   async getMetadataAttempt() {
-    const header = await this.cache.getHeader(this.source);
+    const header = await this.cache.getFilelist(this.source);
     let metadata = {};
     if (header.packageType === "vtpk") {
       const resp = await this.source.getBytes(
@@ -197,7 +72,7 @@ export class TilePackage {
   }
 
   async getResourceAttempt(file, signal) {
-    const header = await this.cache.getHeader(this.source);
+    const header = await this.cache.getFilelist(this.source);
     if (!header.files[file]) return undefined;
     const resource = await this.cache.getResource(
       this.source,
@@ -224,29 +99,30 @@ export class TilePackage {
     }
   }
 
-  async getStyleAttempt() {
-    const header = await this.cache.getHeader(this.source);
+  async getStylesAttempt() {
+    const filelist = await this.cache.getFilelist(this.source);
     const sourceKey = this.source.getKey();
+    /*
     if (header.packageType === "vtpk") {
       const metadata = await getJsonFromFile(
         "p12/root.json",
         header.files,
         this.source,
       );
-      const style = await getJsonFromFile(
+      const styles = await getJsonFromFile(
         "p12/resources/styles/root.json",
         header.files,
         this.source,
       );
-      if (style.sources && style.sources.esri) {
-        delete style.sources.esri.url;
-        style.sources.esri.tiles = [`tilepackage://${sourceKey}/{z}/{x}/{y}`];
-        style.sources.esri.type = style.sources.esri.type || "vector";
-        style.sources.esri.minzoom = header.minZoom || 0;
-        style.sources.esri.maxzoom = header.maxZoom || 22;
+      if (styles.sources && styles.sources.esri) {
+        delete styles.sources.esri.url;
+        styles.sources.esri.tiles = [`tilepackage://${sourceKey}/{z}/{x}/{y}`];
+        styles.sources.esri.type = styles.sources.esri.type || "vector";
+        styles.sources.esri.minzoom = header.minZoom || 0;
+        styles.sources.esri.maxzoom = header.maxZoom || 22;
       }
-      for (const k in style.sources) {
-        const src = style.sources[k];
+      for (const k in styles.sources) {
+        const src = styles.sources[k];
         if (
           src &&
           typeof src.url === "string" &&
@@ -281,22 +157,39 @@ export class TilePackage {
       },
       layers: [{ id: "tilepackageraster", type: "raster", source: "esri" }],
     };
+    */
+    const styles = [];
+    for (const file in filelist) {
+      if (file.startsWith("styles/") && file.endsWith(".json")) {
+        try {
+          const style = await getJsonFromFile(file, filelist, this.source);
+          // TODO Rewrite any tilepackage:// URLs in the style
+          styles.push(style);
+        } catch (e) {
+          console.warn(
+            `[tilepackage style] failed to load style file ${file}:`,
+            e,
+          );
+        }
+      }
+    }
+    return styles;
   }
 
-  async getStyle() {
+  async getStyles() {
     try {
-      return await this.getStyleAttempt();
+      return await this.getStylesAttempt();
     } catch (e) {
       if (e instanceof EtagMismatch) {
         this.cache.invalidate(this.source);
-        return await this.getStyleAttempt();
+        return await this.getStylesAttempt();
       }
       throw e;
     }
   }
 
   async getTileJson(baseTilesUrl) {
-    const header = await this.getHeader();
+    const header = await this.getFilelist();
     const metadata = await this.getMetadata();
     const ext = header.tileType;
     const tileJson = {
