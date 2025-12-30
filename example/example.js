@@ -11,13 +11,19 @@
   const { PMX, FileSource, Protocol } = window.pmxProtocol;
   let currentMap = null;
   let protocolInstance = null;
+  let currentPkg = null;
+  let availableStyles = [];
 
-  async function initMap(pkg) {
+  async function initMap(pkg, styleIndex = 0) {
     const fileList = await pkg.getFilelist();
     console.log("PMX file list:", fileList);
 
     const styles = await pkg.getStyles();
     console.log("PMX styles:", styles);
+
+    currentPkg = pkg;
+    availableStyles = styles;
+    populateStyleSelector(styles, styleIndex);
 
     if (!protocolInstance) {
       protocolInstance = new Protocol({
@@ -39,8 +45,17 @@
         console.warn("[example] maplibregl.addProtocol unavailable");
       }
     }
+
+    // Preserve current map state if it exists
+    let mapState = null;
     if (currentMap) {
       try {
+        mapState = {
+          center: currentMap.getCenter(),
+          zoom: currentMap.getZoom(),
+          bearing: currentMap.getBearing(),
+          pitch: currentMap.getPitch(),
+        };
         currentMap.remove();
         // eslint-disable-next-line no-unused-vars
       } catch (_) {
@@ -48,11 +63,49 @@
       }
       currentMap = null;
     }
-    currentMap = new maplibregl.Map({
+
+    const selectedStyle = styles[styleIndex] || styles[0];
+    const mapOptions = {
       container: "map-element",
       localIdeographFontFamily: false,
-      style: styles[3],
+      style: selectedStyle,
+    };
+
+    // Restore previous map state if available
+    if (mapState) {
+      mapOptions.center = mapState.center;
+      mapOptions.zoom = mapState.zoom;
+      mapOptions.bearing = mapState.bearing;
+      mapOptions.pitch = mapState.pitch;
+    }
+
+    currentMap = new maplibregl.Map(mapOptions);
+  }
+
+  function populateStyleSelector(styles, selectedIndex = 0) {
+    const selector = document.getElementById("style-select");
+    if (!selector) return;
+
+    selector.innerHTML = "";
+
+    if (!styles || styles.length === 0) {
+      selector.innerHTML = '<option value="">No styles available</option>';
+      selector.disabled = true;
+      return;
+    }
+
+    styles.forEach((style, index) => {
+      const option = document.createElement("option");
+      option.value = index;
+      const styleName = style.name || `Style ${index + 1}`;
+      option.textContent = styleName;
+      if (index === selectedIndex) {
+        option.selected = true;
+      }
+      selector.appendChild(option);
     });
+
+    selector.disabled = false;
   }
 
   function initWithFile(file) {
@@ -126,6 +179,17 @@
       input.addEventListener("change", (e) => {
         const file = e.target.files && e.target.files[0];
         if (file) initWithFile(file);
+      });
+    }
+
+    const styleSelect = document.getElementById("style-select");
+    if (styleSelect) {
+      styleSelect.addEventListener("change", (e) => {
+        const selectedIndex = parseInt(e.target.value, 10);
+        if (currentPkg && !isNaN(selectedIndex)) {
+          console.log("Switching to style index:", selectedIndex);
+          initMap(currentPkg, selectedIndex);
+        }
       });
     }
     const urlInput = document.getElementById("pmx-url");
