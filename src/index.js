@@ -123,9 +123,9 @@ export class PMX {
             ].url = `pmx://${sourceKey}${style.sources[source].url}`;
           }
           if (style.glyphs) style.glyphs = `pmx://${sourceKey}${style.glyphs}`;
-          console.log("updated style glyphs to:", style.glyphs);
+          //console.log("updated style glyphs to:", style.glyphs);
           if (style.sprite) style.sprite = `pmx://${sourceKey}${style.sprite}`;
-          console.log("updated style sprite to:", style.sprite);
+          //console.log("updated style sprite to:", style.sprite);
           styles.push(style);
         } catch (e) {
           console.warn(`[pmx style] failed to load style file ${file}:`, e);
