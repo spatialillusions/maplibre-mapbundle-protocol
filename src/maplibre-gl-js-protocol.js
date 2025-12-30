@@ -65,14 +65,9 @@ export class Protocol {
         //console.log("PMX non-tile file request:", file, params.type);
         if (params.type === "json" && params.url.endsWith("tiles.json")) {
           // This is probably a file json request
-          console.log(
-            "PMX tiles.json request for file:",
-            file.replace("/tiles.json", ""),
-          );
           const pmtiles = await instance.getPmtilesInstance(
             file.replace("/tiles.json", ""),
           );
-
           const h = await pmtiles.getHeader();
           abortController.signal.throwIfAborted();
 
@@ -138,24 +133,21 @@ export class Protocol {
           expires: resp.expires,
         };
       }
-      /*
-      // TODO handle missing tiles ... 
-      if (header.tileType === "pbf") {
+      const header = await pmtiles.getHeader();
+
+      if (header.tileType === 1) {
         if (this.errorOnMissingTile) {
-          //*
           const e = new Error(
             `Tile [${z},${x},${y}] not found in Tile Package, normal for with variable depth pyramids.`,
           );
           e.name = "TileError";
-          if (this.debug)
-            console.debug("[pmx] missing tile", { z, x, y });
+          if (this.debug) console.debug("[pmx] missing tile", { z, x, y });
           throw e;
         }
         return { data: new Uint8Array() };
       } else {
         return { data: null };
       }
-      //*/
     };
 
     this.package = converter(this.getData);
