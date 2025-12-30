@@ -32,12 +32,6 @@
         debug: true,
       });
       console.debug("[example] Protocol initialized (debug:true)");
-      // Critical: register existing PMX instance so protocol doesn't create FetchSource (causing file:/// fetch)
-      protocolInstance.add(pkg);
-      console.debug(
-        "[example] PMX instance added to protocol with key",
-        pkg.source.getKey(),
-      );
       if (window.maplibregl && maplibregl.addProtocol) {
         maplibregl.addProtocol("pmx", protocolInstance.package);
         console.debug("[example] pmx:// protocol registered with maplibregl");
@@ -45,6 +39,13 @@
         console.warn("[example] maplibregl.addProtocol unavailable");
       }
     }
+
+    // Always register the PMX instance so protocol doesn't create FetchSource (causing file:/// fetch)
+    protocolInstance.add(pkg);
+    console.debug(
+      "[example] PMX instance added to protocol with key",
+      pkg.source.getKey(),
+    );
 
     // Preserve current map state if it exists
     let mapState = null;
