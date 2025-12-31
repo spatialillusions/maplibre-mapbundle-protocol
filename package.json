@@ -21,7 +21,6 @@
     "demo": "npm run build"
   },
   "dependencies": {
-    "fflate": "^0.8.2",
     "pmtiles": "^4.3.2"
   },
   "devDependencies": {

@@ -3,7 +3,6 @@ export * from "./source.js";
 
 import { PMTiles } from "pmtiles";
 import { FetchSource } from "./source.js";
-import defaultDecompress from "./default-decompress.js";
 import getJsonFromFile from "./get-json-from-file.js";
 import SharedPromiseCache from "./shared-promise-cache.js";
 
@@ -34,8 +33,7 @@ export class PMX {
         this.source.coverageCheck = this.coverageCheck;
       }
     }
-    this.decompress =
-      options && options.decompress ? options.decompress : defaultDecompress;
+
     this.cache =
       options && options.cache ? options.cache : new SharedPromiseCache();
     this.pmtiles = {};
