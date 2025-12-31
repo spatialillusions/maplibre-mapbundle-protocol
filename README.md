@@ -57,6 +57,9 @@ url: "mapbundle://./data/archive.mapbundle";
 - `new MapBundle(source, { coverageCheck })` – `source` is URL string or `FileSource`. `coverageCheck` defaults to `true` enabling coverage map.
 - `MapBundle#getHeader()` – name, zooms, bounds, tile type.
 - `MapBundle#getStyles()` – gets all styles from the package.
+- `MapBundle#getFilelist()` – gets the file list from the archive.
+- `MapBundle#getFile(file, signal)` – gets a specific file's data from the archive.
+- `MapBundle#getFileAsJson(file, signal)` – gets a specific file from the archive and parses it as JSON.
 - `Protocol.add(pkg)` – register local file-backed packages for glyph/sprite resolution.
 - `Protocol` options:
   - `metadata` (boolean, default: false) – load metadata section for attribution and inspection

@@ -39,6 +39,31 @@ export class MapBundle {
     this.pmtiles = {};
   }
 
+  // Get a file's data from the MapBundle package
+  async getFile(file, signal) {
+    try {
+      const resource = await this.getResource(file, signal);
+      return resource.data;
+    } catch (e) {
+      if (e instanceof EtagMismatch) {
+        this.cache.invalidate(this.source);
+        const resource = await this.getResource(file, signal);
+        return resource.data;
+      }
+    }
+  }
+
+  async getFileAsJson(file, signal) {
+    try {
+      const data = await this.getFile(file, signal);
+      const decoder = new TextDecoder("utf-8");
+      return JSON.parse(decoder.decode(data));
+    } catch (e) {
+      console.warn(`Failed to get JSON from file ${file}:`, e);
+      throw e;
+    }
+  }
+
   async getFilelist() {
     return await this.cache.getFilelist(this.source);
   }
@@ -141,25 +166,4 @@ export class MapBundle {
       throw e;
     }
   }
-  /*
-  async getTileJson(baseTilesUrl) {
-    const header = await this.getFilelist();
-    const metadata = await this.getMetadata();
-    const ext = header.tileType;
-    const tileJson = {
-      tilejson: "3.0.0",
-      scheme: "xyz",
-      tiles: [`${baseTilesUrl}/{z}/{x}/{y}${ext}`],
-      name: metadata.name,
-      version: header.version,
-      bounds: [header.minLon, header.minLat, header.maxLon, header.maxLat],
-    };
-    if (metadata.vector_layers) tileJson.vector_layers = metadata.vector_layers;
-    if (metadata.attribution) tileJson.attribution = metadata.attribution;
-    if (metadata.description) tileJson.description = metadata.description;
-    if (header.minZoom) tileJson.minzoom = header.minZoom;
-    if (header.maxZoom) tileJson.maxzoom = header.maxZoom;
-    return tileJson;
-  }
-  //*/
 }
