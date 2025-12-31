@@ -1,6 +1,6 @@
-# maplibre-pmx-protocol
+# maplibre-mapbundle-protocol
 
-Custom MapLibre GL JS protocol for reading PMX archives containing PMTiles and style resources.
+Custom MapLibre GL JS protocol for reading MapBundle archives containing PMTiles and style resources.
 
 Works with:
 
@@ -12,7 +12,7 @@ The protocol streams tiles, glyphs and sprites directly from the archive.
 ## Install
 
 ```bash
-npm add maplibre-pmx-protocol
+npm add maplibre-mapbundle-protocol
 ```
 
 ## Import (ESM)
@@ -21,21 +21,21 @@ npm add maplibre-pmx-protocol
 import {
   Protocol,
   FileSource,
-  PMX,
-} from "maplibre-pmx-protocol";
+  MapBundle,
+} from "maplibre-mapbundle-protocol";
 ```
 
-## Local File PMX
+## Local File MapBundle
 
 ```js
 const protocol = new Protocol({ 
   metadata: true,
   debug: true 
 });
-maplibregl.addProtocol("pmx", protocol.package);
+maplibregl.addProtocol("mapbundle", protocol.package);
 
 async function initFromFile(file) {
-  const pkg = new PMX(new FileSource(file));
+  const pkg = new MapBundle(new FileSource(file));
   protocol.add(pkg); // register so sprite/glyph URLs resolve
   const styles = await pkg.getStyles();
   new maplibregl.Map({ container: "map", style: styles[0] });
@@ -45,18 +45,18 @@ async function initFromFile(file) {
 On HTTP(S) you can instead point a style source to a relative URL:
 
 ```js
-url: "pmx://./data/archive.pmx";
+url: "mapbundle://./data/archive.mapbundle";
 ```
 
 ## Vector Style Rewriting
 
-`TilePackage#getStyles()` for replaces any `url` with a `tiles` array (`pmx://<key>/{z}/{x}/{y}`), and sets `sprite` & `glyphs` to protocol endpoints. This avoids extra TileJSON requests that fail under `file://`.
+`TilePackage#getStyles()` for replaces any `url` with a `tiles` array (`mapbundle://<key>/{z}/{x}/{y}`), and sets `sprite` & `glyphs` to protocol endpoints. This avoids extra TileJSON requests that fail under `file://`.
 
 ## API Summary
 
-- `new PMX(source, { coverageCheck })` – `source` is URL string or `FileSource`. `coverageCheck` defaults to `true` enabling coverage map.
-- `PMX#getHeader()` – name, zooms, bounds, tile type.
-- `PMX#getStyles()` – gets all styles from the package.
+- `new MapBundle(source, { coverageCheck })` – `source` is URL string or `FileSource`. `coverageCheck` defaults to `true` enabling coverage map.
+- `MapBundle#getHeader()` – name, zooms, bounds, tile type.
+- `MapBundle#getStyles()` – gets all styles from the package.
 - `Protocol.add(pkg)` – register local file-backed packages for glyph/sprite resolution.
 - `Protocol` options:
   - `metadata` (boolean, default: false) – load metadata section for attribution and inspection
@@ -65,7 +65,7 @@ url: "pmx://./data/archive.pmx";
 
 ## Debug Logging
 
-Enable `debug:true` in `Protocol` for tile fetch + instance events. Coverage ascent & subdivision messages use `[pmx coverage]` and `[pmx subdivide]` prefixes.
+Enable `debug:true` in `Protocol` for tile fetch + instance events. Coverage ascent & subdivision messages use `[mapbundle coverage]` and `[mapbundle subdivide]` prefixes.
 
 ## Demo
 

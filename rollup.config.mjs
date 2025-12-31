@@ -36,7 +36,7 @@ export default [
     output: {
       file: "dist/bundle.js",
       format: "iife",
-      name: "pmxProtocol",
+      name: "mapbundleProtocol",
       sourcemap: true,
     },
     plugins: [nodeResolve({ browser: true }), commonjs()],

@@ -1,14 +1,14 @@
 // Plain script (no modules) for running via file:// without CORS issues.
-// Requires dist/bundle.js to have been loaded first, exposing window.pmxProtocol.
+// Requires dist/bundle.js to have been loaded first, exposing window.mapbundleProtocol.
 /* global maplibregl */
 (function () {
-  if (!window.pmxProtocol) {
+  if (!window.mapbundleProtocol) {
     console.error(
-      "pmxProtocol global not found. Load dist/bundle.js before example.js.",
+      "mapbundleProtocol global not found. Load dist/bundle.js before example.js.",
     );
     return;
   }
-  const { PMX, FileSource, Protocol } = window.pmxProtocol;
+  const { MapBundle, FileSource, Protocol } = window.mapbundleProtocol;
   let currentMap = null;
   let protocolInstance = null;
   let currentPkg = null;
@@ -16,10 +16,10 @@
 
   async function initMap(pkg, styleIndex = 0) {
     const fileList = await pkg.getFilelist();
-    console.log("PMX file list:", fileList);
+    console.log("MapBundle file list:", fileList);
 
     const styles = await pkg.getStyles();
-    console.log("PMX styles:", styles);
+    console.log("MapBundle styles:", styles);
 
     currentPkg = pkg;
     availableStyles = styles;
@@ -33,17 +33,19 @@
       });
       console.debug("[example] Protocol initialized (debug:true)");
       if (window.maplibregl && maplibregl.addProtocol) {
-        maplibregl.addProtocol("pmx", protocolInstance.package);
-        console.debug("[example] pmx:// protocol registered with maplibregl");
+        maplibregl.addProtocol("mapbundle", protocolInstance.package);
+        console.debug(
+          "[example] mapbundle:// protocol registered with maplibregl",
+        );
       } else {
         console.warn("[example] maplibregl.addProtocol unavailable");
       }
     }
 
-    // Always register the PMX instance so protocol doesn't create FetchSource (causing file:/// fetch)
+    // Always register the MapBundle instance so protocol doesn't create FetchSource (causing file:/// fetch)
     protocolInstance.add(pkg);
     console.debug(
-      "[example] PMX instance added to protocol with key",
+      "[example] MapBundle instance added to protocol with key",
       pkg.source.getKey(),
     );
 
@@ -114,8 +116,8 @@
     try {
       const fileSource = new FileSource(file);
       console.log("FileSource:", fileSource);
-      const pkg = new PMX(fileSource);
-      console.log("PMX:", pkg);
+      const pkg = new MapBundle(fileSource);
+      console.log("MapBundle:", pkg);
       initMap(pkg);
     } catch (err) {
       console.error("Failed to initialize map from file", err);
@@ -155,14 +157,14 @@
   async function initWithUrl(url) {
     const clean = sanitizeUrl(url);
     if (!clean) return;
-    console.log("Loading remote PMX URL:", clean);
+    console.log("Loading remote MapBundle URL:", clean);
     try {
-      const pkg = new PMX(clean);
-      console.log("PMX (remote):", pkg);
+      const pkg = new MapBundle(clean);
+      console.log("MapBundle (remote):", pkg);
       // Await map initialization so we only reflect URL on success
       await initMap(pkg);
       // If URL input exists and is empty, show the URL used for initialization
-      const urlInput = document.getElementById("pmx-url");
+      const urlInput = document.getElementById("mapbundle-url");
       if (urlInput && !urlInput.value) {
         urlInput.value = clean;
       }
@@ -175,7 +177,7 @@
   }
 
   window.addEventListener("DOMContentLoaded", () => {
-    const input = document.getElementById("pmx-input");
+    const input = document.getElementById("mapbundle-input");
     if (input) {
       input.addEventListener("change", (e) => {
         const file = e.target.files && e.target.files[0];
@@ -193,8 +195,8 @@
         }
       });
     }
-    const urlInput = document.getElementById("pmx-url");
-    const urlButton = document.getElementById("pmx-load-url");
+    const urlInput = document.getElementById("mapbundle-url");
+    const urlButton = document.getElementById("mapbundle-load-url");
     if (urlButton && urlInput) {
       urlButton.addEventListener("click", () => initWithUrl(urlInput.value));
       urlInput.addEventListener("keydown", (e) => {
@@ -203,9 +205,9 @@
         }
       });
     }
-    // Auto-load demo pmx when served via http/https (not file://)
+    // Auto-load demo mapbundle when served via http/https (not file://)
     if (location.protocol !== "file:") {
-      const demoName = "oslo-small.pmx"; // present in example folder
+      const demoName = "oslo-small.mapbundle"; // present in example folder
       // Use relative path so it works regardless of host/port
       const demoUrl = demoName; // same directory as index.html
       console.log("Attempting auto-load of demo package:", demoUrl);

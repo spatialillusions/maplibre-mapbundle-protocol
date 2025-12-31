@@ -3,7 +3,7 @@ export * from "./source.js";
 
 import { PMTiles } from "pmtiles";
 import { FetchSource } from "./source.js";
-import getJsonFromFile from "./get-json-from-file.js";
+import getJsonFromZip from "./zip/get-json-from-file.js";
 import SharedPromiseCache from "./shared-promise-cache.js";
 
 class EtagMismatch extends Error {
@@ -13,7 +13,7 @@ class EtagMismatch extends Error {
   }
 }
 
-export class PMX {
+export class MapBundle {
   constructor(source, options) {
     // Default coverageCheck enabled; disable with coverageCheck:false
     this.coverageCheck = 1;
@@ -64,7 +64,7 @@ export class PMX {
       file = files.join("/");
     }
     if (!filelist[file]) {
-      console.log(`File ${file} not found in PMX package`);
+      console.log(`File ${file} not found in MapBundle package`);
       return undefined;
     }
 
@@ -105,28 +105,25 @@ export class PMX {
     for (const file in filelist) {
       if (file.startsWith("styles/") && file.endsWith(".json")) {
         try {
-          const style = await getJsonFromFile(file, filelist, this.source);
-          // TODO Rewrite any URLs in the style
-          /*
-          style.sources = {
-            composite: {
-              type: "vector",
-              url: `pmx://${sourceKey}/data/OS_Open_Zoomstack.pmtiles/tiles.json`,
-            },
-          };
-          */
+          const style = await getJsonFromZip(file, filelist, this.source);
+          // Update style URLs to use mapbundle:// protocol
           for (const source in style.sources) {
             style.sources[
               source
-            ].url = `pmx://${sourceKey}${style.sources[source].url}`;
+            ].url = `mapbundle://${sourceKey}${style.sources[source].url}`;
           }
-          if (style.glyphs) style.glyphs = `pmx://${sourceKey}${style.glyphs}`;
+          if (style.glyphs)
+            style.glyphs = `mapbundle://${sourceKey}${style.glyphs}`;
           //console.log("updated style glyphs to:", style.glyphs);
-          if (style.sprite) style.sprite = `pmx://${sourceKey}${style.sprite}`;
+          if (style.sprite)
+            style.sprite = `mapbundle://${sourceKey}${style.sprite}`;
           //console.log("updated style sprite to:", style.sprite);
           styles.push(style);
         } catch (e) {
-          console.warn(`[pmx style] failed to load style file ${file}:`, e);
+          console.warn(
+            `[mapbundle style] failed to load style file ${file}:`,
+            e,
+          );
         }
       }
     }

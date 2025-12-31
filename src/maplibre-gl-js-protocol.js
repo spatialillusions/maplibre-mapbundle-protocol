@@ -1,4 +1,4 @@
-import { PMX } from "./index.js";
+import { MapBundle } from "./index.js";
 
 const converter = (getData) => (requestParameters, arg2) => {
   if (arg2 instanceof AbortController) {
@@ -30,9 +30,9 @@ const converter = (getData) => (requestParameters, arg2) => {
  */
 export class Protocol {
   /**
-   * Initialize the MapLibre PMX protocol.
+   * Initialize the MapLibre MapBundle protocol.
    *
-   * * metadata: also load the metadata section of the PMX. required for some "inspect" functionality
+   * * metadata: also load the metadata section of the MapBundle. required for some "inspect" functionality
    * and to automatically populate the map attribution. Requires an extra HTTP request.
    * * errorOnMissingTile: When a vector MVT tile is missing from the archive, raise an error instead of
    * returning the empty array. Not recommended. This is only to reproduce the behavior of ZXY tile APIs
@@ -46,22 +46,28 @@ export class Protocol {
       : false;
     this.debug = options ? options.debug || false : false;
     this.getData = async (params, abortController) => {
-      const pmxUrl = params.url
-        .substr(params.url.indexOf("://") + 3, params.url.indexOf(".pmx") - 2)
+      const mapbundleUrl = params.url
+        .substr(
+          params.url.indexOf("://") + 3,
+          params.url.indexOf(".mapbundle") - 2,
+        )
         .replace(/(https?)\/\/?/g, "$1://");
-      //console.log("PMX URL:", pmxUrl);
-      let instance = this.tiles.get(pmxUrl);
+
+      let instance = this.tiles.get(mapbundleUrl);
       if (!instance) {
-        instance = new PMX(pmxUrl);
-        this.tiles.set(pmxUrl, instance);
+        instance = new MapBundle(mapbundleUrl);
+        this.tiles.set(mapbundleUrl, instance);
       }
 
       // Check if the url ends in numbers so that it is a tile request
-      let re = new RegExp(/pmx:\/\/(.+)\/(\d+)\/(\d+)\/(\d+)/);
+      let re = new RegExp(/mapbundle:\/\/(.+)\/(\d+)\/(\d+)\/(\d+)/);
       let result = params.url.match(re);
 
       if (!result) {
-        const file = params.url.substr(params.url.indexOf(".pmx") + 5);
+        const file = params.url.substr(
+          params.url.indexOf(".mapbundle") + ".mapbundle".length + 1,
+        );
+
         if (
           params.type === "json" &&
           (params.url.endsWith("tiles.json") ||
@@ -119,7 +125,9 @@ export class Protocol {
       const x = result[3];
       const y = result[4];
 
-      const file = result[1].substr(result[1].indexOf(".pmx") + 5);
+      const file = result[1].substr(
+        result[1].indexOf(".mapbundle") + ".mapbundle".length + 1,
+      );
       const pmtiles = await instance.getPmtilesInstance(file);
       const resp = await pmtiles.getZxy(+z, +x, +y, abortController.signal);
       if (this.debug)
@@ -144,7 +152,8 @@ export class Protocol {
             `Tile [${z},${x},${y}] not found in Tile Package, normal for with variable depth pyramids.`,
           );
           e.name = "TileError";
-          if (this.debug) console.debug("[pmx] missing tile", { z, x, y });
+          if (this.debug)
+            console.debug("[mapbundle] missing tile", { z, x, y });
           throw e;
         }
         return { data: new Uint8Array() };
@@ -157,21 +166,22 @@ export class Protocol {
   }
 
   /**
-   * Add a {@link PMX} instance to the global protocol instance.
+   * Add a {@link MapBundle} instance to the global protocol instance.
    *
-   * For remote fetch sources, references in MapLibre styles like pmx://http://...
+   * For remote fetch sources, references in MapLibre styles like mapbundle://http://...
    * will resolve to the same instance if the URLs match.
    */
   add(p) {
     this.tiles.set(p.source.getKey(), p);
-    if (this.debug) console.debug("[pmx] add instance", p.source.getKey());
+    if (this.debug)
+      console.debug("[mapbundle] add instance", p.source.getKey());
   }
 
   /**
-   * Fetch a {@link PMX} instance by URL, for remote PMX instances.
+   * Fetch a {@link MapBundle} instance by URL, for remote MapBundle instances.
    */
   get(url) {
-    if (this.debug) console.debug("[pmx] get instance", url);
+    if (this.debug) console.debug("[mapbundle] get instance", url);
     return this.tiles.get(url);
   }
 }

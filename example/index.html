@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>PMX Protocol Example</title>
+    <title>MapBundle Protocol Example</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <style>
       html,
@@ -32,45 +32,51 @@
   </head>
   <body>
     <header>
-      <h1 style="margin: 0 0 8px 0; font-size: 18px">maplibre-pmx-protocol</h1>
+      <h1 style="margin: 0 0 8px 0; font-size: 18px">
+        maplibre-mapbundle-protocol
+      </h1>
       <div style="margin: 0 0 10px 0; font-size: 13px">
         <a
-          href="https://github.com/spatialillusions/maplibre-pmx-protocol"
+          href="https://github.com/spatialillusions/maplibre-mapbundle-protocol"
           target="_blank"
           rel="noopener noreferrer"
         >
-          https://github.com/spatialillusions/maplibre-pmx-protocol
+          https://github.com/spatialillusions/maplibre-mapbundle-protocol
         </a>
       </div>
       <div style="margin-bottom: 6px; font-size: 14px; line-height: 1.3">
-        You can either select a local PMX file (<code>.pmx</code>) or enter an
-        HTTP(S) URL to a remote PMX and load it below.
+        You can either select a local MapBundle file (<code>.mapbundle</code>)
+        or enter an HTTP(S) URL to a remote MapBundle and load it below.
       </div>
       <div
         style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center"
       >
         <div>
           <label
-            for="pmx-input"
+            for="mapbundle-input"
             style="display: block; font-weight: 600; margin-bottom: 4px"
             >Local file</label
           >
-          <input id="pmx-input" type="file" accept=".pmx, .zip" />
+          <input id="mapbundle-input" type="file" accept=".mapbundle, .zip" />
         </div>
         <div style="flex: 1; min-width: 280px">
           <label
-            for="pmx-url"
+            for="mapbundle-url"
             style="display: block; font-weight: 600; margin-bottom: 4px"
             >Remote URL</label
           >
           <div style="display: flex; gap: 8px">
             <input
-              id="pmx-url"
+              id="mapbundle-url"
               type="text"
-              placeholder="https://example.com/data/package.pmx"
+              placeholder="https://example.com/data/package.mapbundle"
               style="flex: 1; padding: 4px 6px"
             />
-            <button id="pmx-load-url" type="button" style="padding: 4px 10px">
+            <button
+              id="mapbundle-load-url"
+              type="button"
+              style="padding: 4px 10px"
+            >
               Load URL
             </button>
           </div>
@@ -86,7 +92,7 @@
             style="padding: 4px 6px; min-width: 150px"
             disabled
           >
-            <option value="">Load a PMX file first</option>
+            <option value="">Load a MapBundle file first</option>
           </select>
         </div>
       </div>
@@ -98,7 +104,7 @@
       rel="stylesheet"
     />
     <script src="https://unpkg.com/maplibre-gl@5.13.0/dist/maplibre-gl.js"></script>
-    <!-- Bundled IIFE providing pmxProtocol global -->
+    <!-- Bundled IIFE providing mapbundleProtocol global -->
     <script src="../dist/bundle.js"></script>
     <script src="./example.js"></script>
   </body>

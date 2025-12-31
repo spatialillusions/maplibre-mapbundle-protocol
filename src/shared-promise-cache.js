@@ -1,4 +1,4 @@
-import getFilelistFromPMX from "./get-filelist.js";
+import getFilelistFromMapBundle from "./zip/get-filelist.js";
 
 async function getResource(source, file, filelist, signal) {
   const resp = await source.getBytes(
@@ -12,7 +12,7 @@ async function getResource(source, file, filelist, signal) {
 }
 
 /**
- * A cache for parts of a PMX archive where promises can be shared between requests.
+ * A cache for parts of a MapBundle archive where promises can be shared between requests.
  *
  * Only caches headers, resource files, and directories, not individual tile contents.
  */
@@ -36,7 +36,7 @@ export default class SharedPromiseCache {
     }
 
     const p = new Promise((resolve, reject) => {
-      getFilelistFromPMX(source)
+      getFilelistFromMapBundle(source)
         .then((res) => {
           /*
           if (res[1]) {

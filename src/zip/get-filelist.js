@@ -1,20 +1,18 @@
-import getJsonFromFile from "./get-json-from-file.js";
+import getJsonFromZip from "./get-json-from-file.js";
 
 /**
- * Retrieve the file list of a pmx file
+ * Retrieve the file list of a mapbundle file
  *
- * @param {Source} source - The source of the pmx file.
+ * @param {Source} source - The source of the mapbundle file.
  */
-export default async function getFilelistFromPMX(source) {
+export default async function getFilelistFromMapBundle(source) {
   const key = source.getKey();
   const fileSize = await source.getSize();
   const resp = await source.getBytes(fileSize - 98, 98);
   let v = new DataView(resp.data, 0, 98);
   let entriesCentralDirectory, sizeCentralDirectory, offsetCentralDirectory;
-  //let bigZip64 = false;
   if (v.getUint32(0, true) === 0x06064b50) {
-    // This is a ZIP64 pmx
-    //bigZip64 = true;
+    // This is a ZIP64 mapbundle
     entriesCentralDirectory = Number(v.getBigUint64(32, true));
     sizeCentralDirectory = Number(v.getBigUint64(40, true));
     offsetCentralDirectory = Number(v.getBigUint64(48, true));
@@ -41,7 +39,7 @@ export default async function getFilelistFromPMX(source) {
   }
 
   let entryStart = 0;
-  const pmxFiles = {};
+  const mapbundleFiles = {};
   for (let i = 0; i < entriesCentralDirectory; i++) {
     if (entryStart >= sizeCentralDirectory) break;
     /*
@@ -172,42 +170,7 @@ export default async function getFilelistFromPMX(source) {
       }
     }
 
-    // Verify calculation by reading actual local header when ZIP64 is expected
-    /*
-    if (localExtraFieldZip64Length > 0) {
-      console.log(
-        `PMX file entry: ${filename}
-       - uncompressed size: ${sizeFile} ${
-          sizeFile === 0xffffffff ? "(marker)" : ""
-        }
-       - compressed size: ${compressedSize} ${
-          compressedSize === 0xffffffff ? "(marker)" : ""
-        }
-       - relative offset: ${relativeOffset}
-       - local needs ZIP64: ${localNeedsZip64}
-       - central dir extra field size: ${sizeExtraField}
-       - calculated local ZIP64 extra: ${localExtraFieldZip64Length}`,
-      );
-
-      const localHeaderResp = await source.getBytes(relativeOffset + 26, 4);
-      const localHeaderView = new DataView(localHeaderResp.data);
-      const localFilenameLength = localHeaderView.getUint16(0, true);
-      const actualLocalExtraLength = localHeaderView.getUint16(2, true);
-
-      if (actualLocalExtraLength !== localExtraFieldZip64Length) {
-        console.warn(
-          `ZIP64 extra length mismatch for ${filename}: calculated ${localExtraFieldZip64Length} vs actual ${actualLocalExtraLength}`,
-        );
-      } else {
-        console.log(`✓ ZIP64 extra length verified: ${actualLocalExtraLength}`);
-      }
-      if (filename === "data/protomaps.pmtiles") {
-        console.log("BREAKPOINT");
-      }
-      localExtraFieldZip64Length = actualLocalExtraLength;
-    }
-    //*/
-    pmxFiles[filename] = {
+    mapbundleFiles[filename] = {
       filename: filename,
       size: sizeFile,
       relativeOffset: relativeOffset,
@@ -218,5 +181,5 @@ export default async function getFilelistFromPMX(source) {
   }
 
   let root = {};
-  return pmxFiles;
+  return mapbundleFiles;
 }
