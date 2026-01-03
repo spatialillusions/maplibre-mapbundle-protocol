@@ -60,8 +60,8 @@ export class Protocol {
       }
 
       // Check if the url ends in numbers so that it is a tile request
-      let re = new RegExp(/mapbundle:\/\/(.+)\/(\d+)\/(\d+)\/(\d+)/);
-      let result = params.url.match(re);
+      const re = new RegExp(/mapbundle:\/\/(.+)\/(\d+)\/(\d+)\/(\d+)/);
+      const result = params.url.match(re);
 
       if (!result) {
         const file = params.url.substr(
@@ -100,7 +100,7 @@ export class Protocol {
           };
           //*/
         }
-        if (params.type === "json") {
+        if (params.type === "json" || params.type === "geojson") {
           const resp = await instance.getResource(file, abortController.signal);
           if (resp) {
             const decoder = new TextDecoder("utf-8");
