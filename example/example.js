@@ -12,7 +12,6 @@
   let currentMap = null;
   let protocolInstance = null;
   let currentPkg = null;
-  let availableStyles = [];
 
   async function initMap(pkg, styleIndex = 0) {
     const fileList = await pkg.getFilelist();
@@ -22,7 +21,6 @@
     console.log("MapBundle styles:", styles);
 
     currentPkg = pkg;
-    availableStyles = styles;
     populateStyleSelector(styles, styleIndex);
 
     if (!protocolInstance) {
