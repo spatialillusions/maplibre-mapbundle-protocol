@@ -1,10 +1,10 @@
 # MapBundle Format Specification
 
-MapBundle is a single-file archive format for tiled data and resources needed to visualize the data. The contents of a MapBundle archive can be read directly from a web server without having to download the whole archive.
+MapBundle is a single-file archive format for tiled data, vector data, and resources needed to visualize the data. The contents of a MapBundle archive can be read directly from a web server without having to download the whole archive.
 
 ## Format Version
 
-This document describes MapBundle format version 1.0.
+This document describes MapBundle format version 1.1.
 
 ## File Format
 
@@ -24,15 +24,21 @@ The use of standard ZIP format makes it easy to create and extract contents from
 
 ### Recommended Folders
 
-- **`data/`** - Recommended for storing PMTiles archives containing vector or raster tile data
+- **`data/`** - Recommended for storing PMTiles archives containing vector or raster tile data, and GeoJSON files for vector data
 - **`fonts/`** - Recommended for glyph/font resources in PBF format
 - **`sprites/`** - Recommended for sprite images and JSON metadata
 
 Additional folders may be created as needed for other resources.
 
-## Tiled Data
+## Data Sources
+
+### Tiled Data
 
 Tiled data SHOULD be stored in Protomaps PMTiles format within the `data/` folder or another appropriate location. Each PMTiles file can be referenced by MapLibre style JSON sources.
+
+### Vector Data
+
+Vector data can be stored as GeoJSON files (e.g., `/data/boundaries.geojson`) within the `data/` folder or another appropriate location. GeoJSON files can be referenced from style sources using the standard MapLibre `type: "geojson"` source definition with a `data` property pointing to the file path.
 
 ## Style JSON Files
 
@@ -68,6 +74,10 @@ All resource URLs in style JSON files MUST be stored as absolute paths within th
     "protomaps": {
       "type": "vector",
       "url": "/data/tiles.pmtiles"
+    },
+    "boundaries": {
+      "type": "geojson",
+      "data": "/data/boundaries.geojson"
     }
   }
 }
@@ -86,7 +96,8 @@ my-map.mapbundle (ZIP archive with STORE compression)
 │   ├── dark.json
 │   └── satellite.json
 ├── data/
-│   └── tiles.pmtiles
+│   ├── tiles.pmtiles
+│   └── boundaries.geojson
 ├── fonts/
 │   ├── Noto Sans Regular/
 │   │   ├── 0-255.pbf
