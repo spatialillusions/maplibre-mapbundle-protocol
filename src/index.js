@@ -152,9 +152,18 @@ export class MapBundle {
           if (style.glyphs)
             style.glyphs = `mapbundle://${sourceKey}${style.glyphs}`;
           //console.log("updated style glyphs to:", style.glyphs);
-          if (style.sprite)
-            style.sprite = `mapbundle://${sourceKey}${style.sprite}`;
-          //console.log("updated style sprite to:", style.sprite);
+          if (style.sprite) {
+            if (typeof style.sprite === "string") {
+              style.sprite = `mapbundle://${sourceKey}${style.sprite}`;
+            } else if (Array.isArray(style.sprite)) {
+              style.sprite = style.sprite.map((sprite) =>
+                Object.assign({}, sprite, {
+                  url: `mapbundle://${sourceKey}${sprite.url}`,
+                }),
+              );
+            }
+            //console.log("updated style sprite to:", style.sprite);
+          }
           styles.push(style);
         } catch (e) {
           console.warn(
