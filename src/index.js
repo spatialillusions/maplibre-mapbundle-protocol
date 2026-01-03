@@ -134,7 +134,10 @@ export class MapBundle {
           // Update style URLs to use mapbundle:// protocol
           for (const source in style.sources) {
             // Update source URLs
-            if (style.sources[source].url) {
+            if (
+              style.sources[source].url &&
+              style.sources[source].url.startsWith("/")
+            ) {
               style.sources[
                 source
               ].url = `mapbundle://${sourceKey}${style.sources[source].url}`;
@@ -149,20 +152,24 @@ export class MapBundle {
               ].data = `mapbundle://${sourceKey}${style.sources[source].data}`;
             }
           }
-          if (style.glyphs)
+          if (style.glyphs && style.glyphs.startsWith("/")) {
             style.glyphs = `mapbundle://${sourceKey}${style.glyphs}`;
-          //console.log("updated style glyphs to:", style.glyphs);
+          }
           if (style.sprite) {
             if (typeof style.sprite === "string") {
-              style.sprite = `mapbundle://${sourceKey}${style.sprite}`;
+              if (style.sprite.startsWith("/")) {
+                style.sprite = `mapbundle://${sourceKey}${style.sprite}`;
+              }
             } else if (Array.isArray(style.sprite)) {
-              style.sprite = style.sprite.map((sprite) =>
-                Object.assign({}, sprite, {
-                  url: `mapbundle://${sourceKey}${sprite.url}`,
-                }),
-              );
+              style.sprite = style.sprite.map((sprite) => {
+                if (sprite.url && sprite.url.startsWith("/")) {
+                  return Object.assign({}, sprite, {
+                    url: `mapbundle://${sourceKey}${sprite.url}`,
+                  });
+                }
+                return sprite;
+              });
             }
-            //console.log("updated style sprite to:", style.sprite);
           }
           styles.push(style);
         } catch (e) {
