@@ -1,6 +1,29 @@
 /* global globalThis */
 
 /**
+ * Wraps a fetch call with a timeout
+ */
+async function fetchWithTimeout(url, options, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const fetchOptions = Object.assign({}, options, {
+      signal: options && options.signal ? options.signal : controller.signal,
+    });
+    const response = await fetch(url, fetchOptions);
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === "AbortError") {
+      throw new Error(`Request timeout after ${timeoutMs}ms`);
+    }
+    throw error;
+  }
+}
+
+/**
  * Interface for retrieving an archive from remote or local storage.
  */
 export class Source {
@@ -25,9 +48,11 @@ export class FileSource extends Source {
       this.coverageCheck = options.coverageCheck;
     }
     this.fileOffset = options && options.fileOffset ? options.fileOffset : 0;
+    //console.log("Mapbundle FileSource initialized", this.file, this.fileOffset);
   }
 
   clone(fileOffset) {
+    //console.log("Cloning FileSource with offset", fileOffset);
     return new FileSource(this.file, {
       coverageCheck: this.coverageCheck,
       fileOffset: fileOffset,
@@ -48,8 +73,22 @@ export class FileSource extends Source {
       this.fileOffset + offset,
       this.fileOffset + offset + length,
     );
-    const a = await blob.arrayBuffer();
-    return { data: a };
+
+    // Add timeout protection for arrayBuffer (10 seconds)
+    const timeoutMs = 10000;
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(
+        () => reject(new Error("File read timeout after " + timeoutMs + "ms")),
+        timeoutMs,
+      );
+    });
+
+    try {
+      const a = await Promise.race([blob.arrayBuffer(), timeoutPromise]);
+      return { data: a };
+    } catch (error) {
+      throw new Error("Failed to read file: " + error.message);
+    }
   }
 }
 
@@ -72,10 +111,10 @@ export class FetchSource extends Source {
       typeof globalThis !== "undefined"
         ? globalThis
         : typeof window !== "undefined"
-        ? window
-        : typeof self !== "undefined"
-        ? self
-        : {};
+          ? window
+          : typeof self !== "undefined"
+            ? self
+            : {};
     let userAgent = "";
     if (g && typeof g.navigator !== "undefined") {
       userAgent = g.navigator.userAgent || "";
@@ -126,7 +165,7 @@ export class FetchSource extends Source {
       cache = "no-store";
     }
 
-    const resp = await fetch(this.url, {
+    const resp = await fetchWithTimeout(this.url, {
       signal: signal,
       cache: cache,
       headers: requestHeaders,
@@ -146,14 +185,17 @@ export class FetchSource extends Source {
       // Getting head is much slower but works. We need to get the size
       // of the file in some way since zip files has the catalog
       // directory at the end.
-      const response = await fetch(this.url, {
+      const response = await fetchWithTimeout(this.url, {
         method: "HEAD",
       });
       if (response.ok) {
         const fileSize = response.headers.get("Content-Length");
-        this.size = fileSize;
-        return fileSize;
+        if (fileSize) {
+          this.size = fileSize;
+          return fileSize;
+        }
       }
+      throw new Error("Failed to get file size from server");
     }
 
     if (resp.status === 200 && !contentRange) {
@@ -162,6 +204,8 @@ export class FetchSource extends Source {
         "Server returned no content-length header or content-length exceeding request. Check that your storage backend supports HTTP Byte Serving.",
       );
     }
+
+    throw new Error(`Unexpected response status: ${resp.status}`);
   }
 
   setHeaders(customHeaders) {
@@ -193,7 +237,7 @@ export class FetchSource extends Source {
       cache = "no-store";
     }
 
-    let resp = await fetch(this.url, {
+    let resp = await fetchWithTimeout(this.url, {
       signal: signal,
       cache: cache,
       headers: requestHeaders,
@@ -205,7 +249,7 @@ export class FetchSource extends Source {
         throw new Error("Missing content-length on 416 response");
       }
       const actualLength = +contentRange.substr(8);
-      resp = await fetch(this.url, {
+      resp = await fetchWithTimeout(this.url, {
         signal: signal,
         cache: "reload",
         headers: { range: `bytes=0-${actualLength - 1}` },

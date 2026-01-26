@@ -78,7 +78,7 @@ export class Protocol {
             file.replace("/tiles.json", "").replace("/tilejson.json", ""),
           );
           const h = await pmtiles.getHeader();
-          abortController.signal.throwIfAborted();
+          //abortController.signal.throwIfAborted();
 
           if (h.minLon >= h.maxLon || h.minLat >= h.maxLat) {
             console.error(
@@ -101,23 +101,52 @@ export class Protocol {
           //*/
         }
         if (params.type === "json" || params.type === "geojson") {
-          const resp = await instance.getResource(file, abortController.signal);
+          let jsonFile = file;
+          if (file.startsWith("sprites") && !file.endsWith(".json")) {
+            jsonFile = file + ".json";
+          }
+          //console.log("Fetching JSON file from MapBundle:", jsonFile);
+          const resp = await instance.getResource(
+            jsonFile,
+            abortController.signal,
+          );
           if (resp) {
             const decoder = new TextDecoder("utf-8");
             const json = JSON.parse(decoder.decode(resp.data));
             return {
               data: json,
             };
+          } else {
+            throw new DOMException(
+              `JSON file ${jsonFile} not found in MapBundle package`,
+              "AbortError",
+            );
           }
         }
         // This is another non-tile request, return the file directly
-        const resp = await instance.getResource(file, abortController.signal);
+        let bundeFile = file;
+        if (
+          params.type === "image" &&
+          file.startsWith("sprites/") &&
+          !file.endsWith(".png")
+        ) {
+          bundeFile = file + ".png";
+        }
+        const resp = await instance.getResource(
+          bundeFile,
+          abortController.signal,
+        );
         if (resp) {
           return {
             data: new Uint8Array(resp.data),
             cacheControl: resp.cacheControl,
             expires: resp.expires,
           };
+        } else {
+          throw new DOMException(
+            `File ${file} not found in MapBundle package`,
+            "AbortError",
+          );
         }
       }
       // Parse z/x/y from the URL

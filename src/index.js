@@ -65,7 +65,8 @@ export class MapBundle {
   }
 
   async getFilelist() {
-    return await this.cache.getFilelist(this.source);
+    const filelist = await this.cache.getFilelist(this.source);
+    return filelist;
   }
 
   async getPmtilesInstance(file) {
@@ -89,7 +90,7 @@ export class MapBundle {
       file = files.join("/");
     }
     if (!filelist[file]) {
-      console.log(`File ${file} not found in MapBundle package`);
+      console.error(`File ${file} not found in MapBundle package`);
       return undefined;
     }
 
@@ -123,14 +124,18 @@ export class MapBundle {
   }
 
   async getStylesAttempt() {
+    //console.log("Loading styles from MapBundle");
     const filelist = await this.cache.getFilelist(this.source);
+    //console.log("Got filelist:", filelist);
     const sourceKey = this.source.getKey();
 
     const styles = [];
     for (const file in filelist) {
       if (file.startsWith("styles/") && file.endsWith(".json")) {
         try {
+          //console.log("Loading style file:", file);
           const style = await getJsonFromZip(file, filelist, this.source);
+          //console.log("Loaded style:", style);
           // Update style URLs to use mapbundle:// protocol
           for (const source in style.sources) {
             // Update source URLs
@@ -138,18 +143,16 @@ export class MapBundle {
               style.sources[source].url &&
               style.sources[source].url.startsWith("/")
             ) {
-              style.sources[
-                source
-              ].url = `mapbundle://${sourceKey}${style.sources[source].url}`;
+              style.sources[source].url =
+                `mapbundle://${sourceKey}${style.sources[source].url}`;
             }
             // If it is a geojson source with 'data' property, update that too
             if (
               style.sources[source].data &&
               typeof style.sources[source].data === "string"
             ) {
-              style.sources[
-                source
-              ].data = `mapbundle://${sourceKey}${style.sources[source].data}`;
+              style.sources[source].data =
+                `mapbundle://${sourceKey}${style.sources[source].data}`;
             }
           }
           if (style.glyphs && style.glyphs.startsWith("/")) {

@@ -45,10 +45,12 @@ export default class SharedPromiseCache {
               data: Promise.resolve(res[1][2]),
             });
           }*/
-          resolve(res);
+          resolve(res.files);
           this.prune();
         })
         .catch((e) => {
+          // Remove failed promise from cache so it can be retried
+          this.cache.delete(cacheKey);
           reject(e);
         });
     });
@@ -71,6 +73,8 @@ export default class SharedPromiseCache {
           this.prune();
         })
         .catch((e) => {
+          // Remove failed promise from cache so it can be retried
+          this.cache.delete(cacheKey);
           reject(e);
         });
     });
@@ -101,7 +105,7 @@ export default class SharedPromiseCache {
     }
     this.cache.delete(source.getKey());
     const p = new Promise((resolve, reject) => {
-      this.getHeader(source)
+      this.getFilelistFromMapBundle(source)
         .then(() => {
           resolve();
           this.invalidations.delete(key);
