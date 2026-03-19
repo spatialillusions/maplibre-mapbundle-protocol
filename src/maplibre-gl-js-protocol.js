@@ -1,4 +1,4 @@
-import { MapBundle } from "./index.js";
+import { MapBundle } from "./mapbundle.js";
 
 const converter = (getData) => (requestParameters, arg2) => {
   if (arg2 instanceof AbortController) {
